@@ -1,8 +1,8 @@
-import PeoplePage2 from './components/PeoplePage2';
+import PeoplePage from './components/PeoplePage';
 import './App.css';
 
 function App() {
-  return <PeoplePage2 />;
+  return <PeoplePage />;
 }
 
 export default App;
