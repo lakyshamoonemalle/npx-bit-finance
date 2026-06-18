@@ -1,5 +1,4 @@
-import PeoplePage from './components/PeoplePage';
-import './App.css';
+import PeoplePage from './app/pages/people/PeoplePage';
 
 function App() {
   return <PeoplePage />;

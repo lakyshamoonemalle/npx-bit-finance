@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import type { Person } from '../src/components/types';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, 'db.json');
+const DB_PATH = path.join(__dirname, 'peopledb.json');
 
 
 function readDb(): Person[] {

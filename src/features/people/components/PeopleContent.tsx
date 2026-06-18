@@ -1,7 +1,7 @@
 import { useRef, useMemo, useState, useEffect } from 'react';
-import { SearchIcon, SortIcon, PencilIcon, AddPersonIcon, CameraIcon } from './icons/Icons';
-import type { Person } from './types/people';
-import type { Status } from './types/status';
+import { SearchIcon, SortIcon, PencilIcon, AddPersonIcon, CameraIcon } from '../../../shared/icons';
+import type { Person } from '../../../types/people';
+import type { Status } from '../../../types/status';
 
 
 
@@ -26,7 +26,7 @@ type FormState = {
 
 const EMPTY_FORM: FormState = { firstName: '', lastName: '', email: '', status: 'Active', photo: '' };
 
-function ManagePeoplePage2() {
+function PeopleContent() {
   const [people, setPeople] = useState<Person[]>([]);
   const [query, setQuery] = useState('');
   const [ascending, setAscending] = useState(true);
@@ -438,4 +438,4 @@ function ManagePeoplePage2() {
   );
 }
 
-export default ManagePeoplePage2;
+export default PeopleContent;
