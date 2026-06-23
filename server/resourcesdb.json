@@ -1,0 +1,86 @@
+[
+  {
+    "id": 20,
+    "fkProjectId": 5,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 21,
+    "fkProjectId": 5,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1781622478986,
+    "fkProjectId": 1782142560071,
+    "fkPeopleId": 1781622478986,
+    "rate": 70,
+    "hours": 0
+  },
+  {
+    "id": 1781548402931,
+    "fkProjectId": 1782142560071,
+    "fkPeopleId": 1781548402931,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1781622478986,
+    "fkProjectId": 1782152422642,
+    "fkPeopleId": 1781622478986,
+    "rate": 56,
+    "hours": 0
+  },
+  {
+    "id": 6,
+    "fkProjectId": 1782152422642,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1781548402931,
+    "fkProjectId": 1782226941068,
+    "fkPeopleId": 1781548402931,
+    "rate": 10,
+    "hours": 0
+  },
+  {
+    "id": 1782229860889,
+    "fkProjectId": 1782226941068,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1781622478986,
+    "fkProjectId": 1782233682592,
+    "fkPeopleId": 1781622478986,
+    "rate": 50,
+    "hours": 0
+  },
+  {
+    "id": 1782233854273,
+    "fkProjectId": 1782233682592,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1781622478986,
+    "fkProjectId": 1782235392122,
+    "fkPeopleId": 1781622478986,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782235392126,
+    "fkProjectId": 1782235392122,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  }
+]

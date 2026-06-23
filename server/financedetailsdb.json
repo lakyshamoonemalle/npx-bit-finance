@@ -1,0 +1,74 @@
+[
+  {
+    "id": 5,
+    "fkProjectId": 5,
+    "brucePowerPm": 0,
+    "projectNum": 0,
+    "ccaSds": "",
+    "rc": "",
+    "validFrom": "",
+    "validTo": "",
+    "costModel": "",
+    "clientProject": ""
+  },
+  {
+    "id": 1782142560071,
+    "fkProjectId": 1782142560071,
+    "brucePowerPm": 5000,
+    "projectNum": 0,
+    "ccaSds": "123",
+    "rc": "rc012",
+    "validFrom": "",
+    "validTo": "",
+    "costModel": "internla",
+    "clientProject": "cp-23"
+  },
+  {
+    "id": 1782152422642,
+    "fkProjectId": 1782152422642,
+    "brucePowerPm": 1234,
+    "projectNum": 0,
+    "ccaSds": "123",
+    "rc": "123",
+    "validFrom": "",
+    "validTo": "",
+    "costModel": "internal",
+    "clientProject": "cp-123"
+  },
+  {
+    "id": 1782226941068,
+    "fkProjectId": 1782226941068,
+    "brucePowerPm": 20,
+    "projectNum": 0,
+    "ccaSds": "1233",
+    "rc": "RC-12",
+    "validFrom": "",
+    "validTo": "",
+    "costModel": "Internal",
+    "clientProject": "CP-907-90"
+  },
+  {
+    "id": 1782233682592,
+    "fkProjectId": 1782233682592,
+    "brucePowerPm": 10,
+    "projectNum": 0,
+    "ccaSds": "123",
+    "rc": "RC-12",
+    "validFrom": "",
+    "validTo": "",
+    "costModel": "INTERN",
+    "clientProject": "CP-9080-9088"
+  },
+  {
+    "id": 1782235392122,
+    "fkProjectId": 1782235392122,
+    "brucePowerPm": 0,
+    "projectNum": 0,
+    "ccaSds": "",
+    "rc": "",
+    "validFrom": "",
+    "validTo": "",
+    "costModel": "",
+    "clientProject": ""
+  }
+]

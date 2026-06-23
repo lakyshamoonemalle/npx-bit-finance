@@ -1,0 +1,1021 @@
+import { useState, useMemo, useEffect } from 'react';
+import type { Project, ProjectStatus, ProjectCategory } from '../../../types/project';
+import type { Person } from '../../../types/people';
+
+// ─── Table display constants ──────────────────────────────────────────────────
+
+// How many rows to show per page
+const PAGE_SIZE = 5;
+
+// Each category gets a tile color and an emoji for the PROJECT DETAILS column
+const CATEGORY_STYLE: Record<ProjectCategory, { bg: string; emoji: string }> = {
+  Development: { bg: '#1d4ed8', emoji: '🚀' },
+  Marketing:   { bg: '#b45309', emoji: '📣' },
+  Research:    { bg: '#0e7490', emoji: '📊' },
+  Consulting:  { bg: '#6d28d9', emoji: '🤝' },
+  Design:      { bg: '#be185d', emoji: '🎨' },
+  Finance:     { bg: '#15803d', emoji: '💰' },
+};
+
+// Colored dot shown in the STATUS column for each status value
+const STATUS_COLOR: Record<ProjectStatus, string> = {
+  Active:        '#22c55e', // green
+  Pending:       '#f59e0b', // amber
+  'In Progress': '#3b82f6', // blue
+  'On Hold':     '#6b7280', // gray
+  Completed:     '#8b5cf6', // purple
+  Archived:      '#4a4a52', // dark gray
+};
+
+
+// One row in the Billing Codes section of the modal, fields to enter in the data 
+type BillingCodeRow = {
+  id: number;
+  label: string;
+  clientProject: string;
+  sdsCca: string;
+  rc: string;
+  amount: string;
+};
+
+// One row in the Resources section of the modal
+type ResourceRow = {
+  id: number;
+  employee: string; // selected from the people list
+  rate: string;     // hourly rate
+};
+
+// All the fields controlled by the Create / Edit modal form
+type ModalForm = {
+  name: string;
+  client: string;
+  startDate: string;
+  endDate: string;
+  projectType: string;   // "FP" or "T&M"
+  npxNumber: string;
+  category: ProjectCategory;
+  status: ProjectStatus;
+  billingCodes: BillingCodeRow[];
+  resources: ResourceRow[];
+};
+
+// ─── Module-level ID counter ──────────────────────────────────────────────────
+// Used to give each billing code / resource row a unique React key.
+// Simple incrementing counter is fine — these IDs only live in the browser.
+let _uid = 1;
+const nextUid = () => _uid++;
+
+// Factory functions so every new row starts completely blank
+const newBillingCode = (): BillingCodeRow => ({
+  id: nextUid(), label: '', clientProject: '', sdsCca: '', rc: '', amount: '',
+});
+const newResource = (): ResourceRow => ({
+  id: nextUid(), employee: '', rate: '',
+});
+
+// Blank state for the modal when creating a brand-new project
+const EMPTY_MODAL: ModalForm = {
+  name: '', client: '', startDate: '', endDate: '',
+  projectType: '', npxNumber: '',
+  category: 'Development', status: 'Active',
+  billingCodes: [newBillingCode()],
+  resources: [newResource(), newResource()], // two empty rows by default (matches screenshot)
+};
+
+// ─── Helper ──────────────────────────────────────────────────────────────────
+
+// Converts an ISO date string into a human-readable label like "2 days ago"
+function timeAgo(isoDate: string): string {
+  const days = Math.floor((Date.now() - new Date(isoDate).getTime()) / 86_400_000);
+  if (days === 0) return 'today';
+  if (days === 1) return '1 day ago';
+  if (days < 7)  return `${days} days ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks === 1) return '1 week ago';
+  if (weeks < 5)  return `${weeks} weeks ago`;
+  const months = Math.floor(days / 30);
+  return months === 1 ? '1 month ago' : `${months} months ago`;
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
+function ProjectContent() {
+  // Full project list loaded from the server
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  // People fetched for the "Select employee…" dropdown in Resources
+  const [people, setPeople] = useState<Person[]>([]);
+
+  // Active filter tab: All | In Progress | Completed
+  const [filter, setFilter] = useState<'All' | 'In Progress' | 'Completed'>('All');
+
+  // Current page (1-based)
+  const [page, setPage] = useState(1);
+
+  // Whether the Create/Edit modal is open
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // ID of the project being edited — null means we're creating a new one
+  const [editingId, setEditingId] = useState<number | null>(null);
+
+  // All values inside the modal form
+  const [form, setForm] = useState<ModalForm>({ ...EMPTY_MODAL });
+
+  // Load projects and people from the API when the component first renders
+  useEffect(() => {
+    fetch('/api/projects').then(r => r.json()).then(setProjects);
+    fetch('/api/people').then(r => r.json()).then(setPeople);
+  }, []);
+
+  // ── Derived data ────────────────────────────────────────────────────────────
+
+  const filtered = useMemo(() => {
+    if (filter === 'In Progress') return projects.filter(p => p.status !== 'Completed');
+    if (filter === 'Completed')   return projects.filter(p => p.status === 'Completed');
+    return projects;
+  }, [projects, filter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const visible    = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // ── Modal open / close ──────────────────────────────────────────────────────
+
+  function openCreate() {
+    setEditingId(null);
+    // Fresh blank form with two empty resource rows
+    setForm({
+      ...EMPTY_MODAL,
+      billingCodes: [newBillingCode()],
+      resources:    [newResource(), newResource()],
+    });
+    setModalOpen(true);
+  }
+
+  function openEdit(project: Project) {
+    setEditingId(project.id);
+    // Pre-fill every field with the existing project's values
+    setForm({
+      name:         project.name,
+      client:       project.client,
+      startDate:    project.startDate    ?? '',
+      endDate:      project.endDate      ?? '',
+      projectType:  project.projectType  ?? '',
+      npxNumber:    project.npxNumber,
+      category:     project.category,
+      status:       project.status,
+      // If the project has no billing codes yet, start with one blank row
+      billingCodes: project.billingCodes?.length ? project.billingCodes : [newBillingCode()],
+      // Same for resources
+      resources:    project.resources?.length    ? project.resources    : [newResource(), newResource()],
+    });
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    setEditingId(null);
+  }
+
+  // ── Form submission ─────────────────────────────────────────────────────────
+
+  async function handleSubmit() {
+    // Require at least a name and NPX number before saving
+    if (!form.name.trim() || !form.npxNumber.trim()) return;
+
+    const payload = {
+      name:         form.name.trim(),
+      client:       form.client.trim(),
+      startDate:    form.startDate,
+      endDate:      form.endDate,
+      projectType:  form.projectType,
+      npxNumber:    form.npxNumber.trim(),
+      category:     form.category,
+      status:       form.status,
+      billingCodes: form.billingCodes,
+      resources:    form.resources,
+    };
+
+    if (editingId === null) {
+      // POST — server assigns the id and createdAt date
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const created: Project = await res.json();
+      setProjects(prev => [...prev, created]);
+    } else {
+      // PUT — update the existing project record
+      const res = await fetch(`/api/projects/${editingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const updated: Project = await res.json();
+      setProjects(prev => prev.map(p => (p.id === editingId ? updated : p)));
+    }
+
+    closeModal();
+  }
+
+  async function handleArchive(project: Project) {
+    const res = await fetch(`/api/projects/${project.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'Archived' }),
+    });
+    const updated: Project = await res.json();
+    setProjects(prev => prev.map(p => (p.id === project.id ? updated : p)));
+  }
+
+  // ── Billing code row helpers ─────────────────────────────────────────────────
+
+  // Add a new blank billing code row
+  function addBillingCode() {
+    setForm(f => ({ ...f, billingCodes: [...f.billingCodes, newBillingCode()] }));
+  }
+
+  // Update a single field in one billing code row (identified by its id)
+  function updateBillingCode(id: number, field: keyof Omit<BillingCodeRow, 'id'>, value: string) {
+    setForm(f => ({
+      ...f,
+      billingCodes: f.billingCodes.map(bc => bc.id === id ? { ...bc, [field]: value } : bc),
+    }));
+  }
+
+  // Remove a billing code row by its id
+  function removeBillingCode(id: number) {
+    setForm(f => ({ ...f, billingCodes: f.billingCodes.filter(bc => bc.id !== id) }));
+  }
+
+  // ── Resource row helpers ─────────────────────────────────────────────────────
+
+  function addResource() {
+    setForm(f => ({ ...f, resources: [...f.resources, newResource()] }));
+  }
+
+  function updateResource(id: number, field: keyof Omit<ResourceRow, 'id'>, value: string) {
+    setForm(f => ({
+      ...f,
+      resources: f.resources.map(r => r.id === id ? { ...r, [field]: value } : r),
+    }));
+  }
+
+  function removeResource(id: number) {
+    setForm(f => ({ ...f, resources: f.resources.filter(r => r.id !== id) }));
+  }
+
+  // ── Shared input style used throughout the modal ─────────────────────────────
+
+  // Dark-but-not-black input background with a subtle border
+  const fieldInput: React.CSSProperties = {
+    width:        '100%',
+    boxSizing:    'border-box',
+    background:   '#252530',
+    border:       '1px solid #3c3c4e',
+    borderRadius: 8,
+    padding:      '9px 12px',
+    fontSize:     14,
+    color:        '#e4e4f0',
+    outline:      'none',
+    colorScheme:  'dark', // makes browser date-pickers use a dark theme
+  };
+
+  // Uppercase label above each field
+  const fieldLabel: React.CSSProperties = {
+    display:       'block',
+    fontSize:      11,
+    fontWeight:    600,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color:         '#8888a0',
+    marginBottom:  6,
+  };
+
+  // Inline SVG trash icon reused in billing code and resource rows
+  const TrashIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4h6v2" />
+    </svg>
+  );
+
+  // Archive icon used in the table's delete action button
+  const ArchiveIcon = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="21 8 21 21 3 21 3 8" />
+      <rect x="1" y="3" width="22" height="5" />
+      <line x1="10" y1="12" x2="14" y2="12" />
+    </svg>
+  );
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+
+  return (
+    <div
+      style={{
+        background:  '#121214',
+        minHeight:   '100vh',
+        padding:     24,
+        color:       '#e7e7ea',
+        fontFamily:  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      }}
+    >
+      {/* ── Page header ──────────────────────────────────────────────────── */}
+      <div
+        style={{
+          display:        'flex',
+          alignItems:     'flex-start',
+          justifyContent: 'space-between',
+          paddingBottom:  24,
+          borderBottom:   '1px solid #2e2e34',
+          marginBottom:   32,
+        }}
+      >
+        <div>
+          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>Project Portfolio</h1>
+          <p style={{ fontSize: 14, color: '#9b9ba3', margin: '6px 0 0' }}>
+            Register a new initiative in the system by filling out the details below.
+          </p>
+        </div>
+
+        {/* "+ Create Project" button — opens the modal */}
+        <button
+          type="button"
+          onClick={openCreate}
+          style={{
+            display:    'flex',
+            alignItems: 'center',
+            gap:        8,
+            background: '#6c47ff',
+            color:      '#fff',
+            border:     'none',
+            borderRadius: 10,
+            padding:    '10px 18px',
+            fontSize:   14,
+            fontWeight: 500,
+            cursor:     'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          + Create Project
+        </button>
+      </div>
+
+      {/* ── Section heading + All / In Progress / Completed tabs ─────────── */}
+      <div
+        style={{
+          display:        'flex',
+          alignItems:     'flex-start',
+          justifyContent: 'space-between',
+          marginBottom:   20,
+        }}
+      >
+        <div>
+          <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>Active Projects</h2>
+          <p style={{ fontSize: 13, color: '#9b9ba3', margin: '4px 0 0' }}>
+            A comprehensive list of all current and past projects.
+          </p>
+        </div>
+
+        {/* Filter pill tabs */}
+        <div
+          style={{
+            display:      'flex',
+            background:   '#1a1a1e',
+            border:       '1px solid #2e2e34',
+            borderRadius: 10,
+            padding:      4,
+            gap:          4,
+          }}
+        >
+          {(['All', 'In Progress', 'Completed'] as const).map(tab => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => { setFilter(tab); setPage(1); }}
+              style={{
+                background:   filter === tab ? '#6c47ff' : 'transparent',
+                color:        filter === tab ? '#fff' : '#9b9ba3',
+                border:       'none',
+                borderRadius: 7,
+                padding:      '6px 14px',
+                fontSize:     13,
+                fontWeight:   500,
+                cursor:       'pointer',
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Projects table ─────────────────────────────────────────────────── */}
+      <div style={{ border: '1px solid #2e2e34', borderRadius: 12, overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #2e2e34' }}>
+              {['PROJECT DETAILS', 'NPX#', 'CLIENT', 'CATEGORY', 'STATUS', 'ACTIONS'].map((h, i) => (
+                <th
+                  key={h}
+                  style={{
+                    textAlign:     i === 5 ? 'right' : 'left',
+                    padding:       '14px 20px',
+                    fontSize:      11,
+                    fontWeight:    500,
+                    letterSpacing: '0.08em',
+                    color:         '#9b9ba3',
+                  }}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((project, idx) => {
+              const cat = CATEGORY_STYLE[project.category] ?? CATEGORY_STYLE.Development;
+              return (
+                <tr
+                  key={project.id}
+                  // Separator between rows, but not after the last one
+                  style={{ borderBottom: idx < visible.length - 1 ? '1px solid #26262c' : 'none' }}
+                >
+                  {/* PROJECT DETAILS: colored tile + name + created date */}
+                  <td style={{ padding: '14px 20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div
+                        style={{
+                          width: 40, height: 40, borderRadius: 10,
+                          background: cat.bg,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 18, flexShrink: 0,
+                        }}
+                      >
+                        {cat.emoji}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{project.name}</div>
+                        <div style={{ fontSize: 12, color: '#9b9ba3', marginTop: 2 }}>
+                          Created {timeAgo(project.createdAt)}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td style={{ padding: '14px 20px', color: '#c5c5cd' }}>{project.npxNumber}</td>
+                  <td style={{ padding: '14px 20px', color: '#c5c5cd' }}>{project.client}</td>
+
+                  {/* CATEGORY badge */}
+                  <td style={{ padding: '14px 20px' }}>
+                    <span
+                      style={{
+                        display: 'inline-block', padding: '3px 10px', borderRadius: 6,
+                        fontSize: 11, fontWeight: 600, letterSpacing: '0.06em',
+                        textTransform: 'uppercase', background: '#2a2a30', color: '#c5c5cd',
+                      }}
+                    >
+                      {project.category}
+                    </span>
+                  </td>
+
+                  {/* STATUS: colored dot + label */}
+                  <td style={{ padding: '14px 20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span
+                        style={{
+                          width: 8, height: 8, borderRadius: '50%',
+                          background: STATUS_COLOR[project.status] ?? '#6b7280',
+                          display: 'inline-block', flexShrink: 0,
+                        }}
+                      />
+                      {project.status}
+                    </div>
+                  </td>
+
+                  {/* ACTIONS: edit + delete */}
+                  <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                      <button
+                        type="button"
+                        onClick={() => openEdit(project)}
+                        aria-label={`Edit ${project.name}`}
+                        style={{ background: 'transparent', border: 'none', color: '#9b9ba3', cursor: 'pointer', padding: 6 }}
+                      >
+                        {/* Pencil icon */}
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleArchive(project)}
+                        aria-label={`Archive ${project.name}`}
+                        style={{ background: 'transparent', border: 'none', color: '#9b9ba3', cursor: 'pointer', padding: 6 }}
+                      >
+                        <ArchiveIcon />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+
+            {/* Empty state */}
+            {visible.length === 0 && (
+              <tr>
+                <td colSpan={6} style={{ padding: '32px 20px', textAlign: 'center', color: '#7c7c85' }}>
+                  No projects found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+
+        {/* Pagination bar */}
+        <div
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '14px 20px', borderTop: '1px solid #2e2e34',
+            fontSize: 13, color: '#9b9ba3',
+          }}
+        >
+          <span>
+            Showing{' '}
+            <strong style={{ color: '#e7e7ea' }}>
+              {filtered.length === 0
+                ? '0'
+                : `${(page - 1) * PAGE_SIZE + 1}-${Math.min(page * PAGE_SIZE, filtered.length)}`}
+            </strong>{' '}
+            of <strong style={{ color: '#e7e7ea' }}>{filtered.length}</strong> projects
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              style={{ background: 'transparent', border: '1px solid #3a3a42', borderRadius: 8, padding: '5px 12px', fontSize: 13, color: page === 1 ? '#4a4a52' : '#e7e7ea', cursor: page === 1 ? 'default' : 'pointer' }}>
+              Previous
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+              <button key={p} type="button" onClick={() => setPage(p)}
+                style={{ background: page === p ? '#6c47ff' : 'transparent', border: page === p ? 'none' : '1px solid #3a3a42', borderRadius: 8, padding: '5px 10px', fontSize: 13, color: page === p ? '#fff' : '#e7e7ea', cursor: 'pointer', minWidth: 32 }}>
+                {p}
+              </button>
+            ))}
+            <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              style={{ background: 'transparent', border: '1px solid #3a3a42', borderRadius: 8, padding: '5px 12px', fontSize: 13, color: page === totalPages ? '#4a4a52' : '#e7e7ea', cursor: page === totalPages ? 'default' : 'pointer' }}>
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          Create / Edit modal
+          ══════════════════════════════════════════════════════════════════ */}
+      {modalOpen && (
+        // Full-screen dark scrim — clicking it closes the modal
+        <div
+          onClick={closeModal}
+          style={{
+            position:   'fixed',
+            inset:      0,
+            background: 'rgba(0, 0, 0, 0.65)',
+            zIndex:     1000,
+            display:    'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            padding:    '40px 20px',
+            overflowY:  'auto',
+          }}
+        >
+          {/* Modal box — stopPropagation prevents the scrim click from firing */}
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background:   '#1e1e2c',   // dark purple-gray, not black
+              borderRadius: 16,
+              width:        '100%',
+              maxWidth:     880,
+              flexShrink:   0,
+              boxShadow:    '0 24px 64px rgba(0,0,0,0.5)',
+            }}
+          >
+
+            {/* ── Modal header ─────────────────────────────────────────── */}
+            <div
+              style={{
+                display:        'flex',
+                justifyContent: 'space-between',
+                alignItems:     'flex-start',
+                padding:        '28px 28px 20px',
+              }}
+            >
+              <div>
+                <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#e4e4f0' }}>
+                  {editingId === null ? 'Create New Project' : 'Edit Project'}
+                </h2>
+                <p style={{ margin: '6px 0 0', fontSize: 13, color: '#8888a0' }}>
+                  Fill in the details to launch your next initiative.
+                </p>
+              </div>
+
+              {/* X close button */}
+              <button
+                type="button"
+                onClick={closeModal}
+                aria-label="Close modal"
+                style={{
+                  background: 'transparent',
+                  border:     'none',
+                  color:      '#8888a0',
+                  cursor:     'pointer',
+                  fontSize:   20,
+                  padding:    4,
+                  lineHeight: 1,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Thin divider under the header */}
+            <hr style={{ border: 'none', borderTop: '1px solid #2e2e3e', margin: 0 }} />
+
+            {/* ── Modal body ───────────────────────────────────────────── */}
+            <div style={{ padding: '24px 28px' }}>
+
+              {/* GENERAL INFORMATION section label */}
+              <div
+                style={{
+                  fontSize:      12,
+                  fontWeight:    700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color:         '#d4d4e4',
+                  marginBottom:  16,
+                }}
+              >
+                General Information
+              </div>
+
+              {/* Six input fields in a wrapping flex row */}
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 28 }}>
+
+                {/* PROJECT NAME — widest field */}
+                <div style={{ flex: '3 1 180px' }}>
+                  <label style={fieldLabel}>Project Name</label>
+                  <input
+                    style={fieldInput}
+                    value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="e.g. Q4 Growth Strategy"
+                  />
+                </div>
+
+                {/* CLIENT */}
+                <div style={{ flex: '2 1 140px' }}>
+                  <label style={fieldLabel}>Client</label>
+                  <input
+                    style={fieldInput}
+                    value={form.client}
+                    onChange={e => setForm(f => ({ ...f, client: e.target.value }))}
+                    placeholder="e.g. Acme Corp"
+                  />
+                </div>
+
+                {/* START DATE — browser date picker */}
+                <div style={{ flex: '2 1 130px' }}>
+                  <label style={fieldLabel}>Start Date</label>
+                  <input
+                    type="date"
+                    style={fieldInput}
+                    value={form.startDate}
+                    onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
+                  />
+                </div>
+
+                {/* END DATE */}
+                <div style={{ flex: '2 1 130px' }}>
+                  <label style={fieldLabel}>End Date</label>
+                  <input
+                    type="date"
+                    style={fieldInput}
+                    value={form.endDate}
+                    onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
+                  />
+                </div>
+
+                {/* PROJECT TYPE — FP (Fixed Price) or T&M (Time & Materials) */}
+                <div style={{ flex: '2 1 150px' }}>
+                  <label style={fieldLabel}>Project Type</label>
+                  <select
+                    style={{ ...fieldInput, cursor: 'pointer' }}
+                    value={form.projectType}
+                    onChange={e => setForm(f => ({ ...f, projectType: e.target.value }))}
+                  >
+                    <option value="">Select type (FP/T&M)</option>
+                    <option value="FP">FP — Fixed Price</option>
+                    <option value="T&M">T&M — Time &amp; Materials</option>
+                  </select>
+                </div>
+
+                {/* NPX# — internal project code */}
+                <div style={{ flex: '1.5 1 100px' }}>
+                  <label style={fieldLabel}>NPX#</label>
+                  <input
+                    style={fieldInput}
+                    value={form.npxNumber}
+                    onChange={e => setForm(f => ({ ...f, npxNumber: e.target.value }))}
+                    placeholder="e.g. NPX-12345"
+                  />
+                </div>
+              </div>
+
+              {/* ── BILLING CODES section ──────────────────────────────── */}
+              <div
+                style={{
+                  display:        'flex',
+                  justifyContent: 'space-between',
+                  alignItems:     'center',
+                  marginBottom:   14,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize:      12,
+                    fontWeight:    700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color:         '#d4d4e4',
+                  }}
+                >
+                  Billing Codes
+                </div>
+                {/* "+ ADD BILLING CODE" link-style button */}
+                <button
+                  type="button"
+                  onClick={addBillingCode}
+                  style={{
+                    background: 'transparent',
+                    border:     'none',
+                    color:      '#6c47ff',
+                    fontSize:   12,
+                    fontWeight: 600,
+                    cursor:     'pointer',
+                    padding:    0,
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  + ADD BILLING CODE
+                </button>
+              </div>
+
+              {/* One row per billing code entry */}
+              {form.billingCodes.map((bc, idx) => (
+                <div
+                  key={bc.id}
+                  style={{
+                    display:      'flex',
+                    gap:          12,
+                    flexWrap:     'wrap',
+                    marginBottom: idx < form.billingCodes.length - 1 ? 12 : 0,
+                  }}
+                >
+                  {/* LABEL */}
+                  <div style={{ flex: '2 1 90px' }}>
+                    {/* Column header only on the first row */}
+                    {idx === 0 && <label style={fieldLabel}>Label</label>}
+                    <input
+                      style={fieldInput}
+                      value={bc.label}
+                      onChange={e => updateBillingCode(bc.id, 'label', e.target.value)}
+                      placeholder="e.g. Internal"
+                    />
+                  </div>
+
+                  {/* CLIENT PROJECT */}
+                  <div style={{ flex: '2 1 110px' }}>
+                    {idx === 0 && <label style={fieldLabel}>Client Project</label>}
+                    <input
+                      style={fieldInput}
+                      value={bc.clientProject}
+                      onChange={e => updateBillingCode(bc.id, 'clientProject', e.target.value)}
+                      placeholder="CP-2024-001"
+                    />
+                  </div>
+
+                  {/* SDS/CCA */}
+                  <div style={{ flex: '2 1 120px' }}>
+                    {idx === 0 && <label style={fieldLabel}>SDS/CCA</label>}
+                    <input
+                      style={fieldInput}
+                      value={bc.sdsCca}
+                      onChange={e => updateBillingCode(bc.id, 'sdsCca', e.target.value)}
+                      placeholder="Enter SDS/CCA code"
+                    />
+                  </div>
+
+                  {/* RC */}
+                  <div style={{ flex: '1 1 70px' }}>
+                    {idx === 0 && <label style={fieldLabel}>RC</label>}
+                    <input
+                      style={fieldInput}
+                      value={bc.rc}
+                      onChange={e => updateBillingCode(bc.id, 'rc', e.target.value)}
+                      placeholder="RC-12"
+                    />
+                  </div>
+
+                  {/* AMOUNT */}
+                  <div style={{ flex: '1 1 80px' }}>
+                    {idx === 0 && <label style={fieldLabel}>Amount</label>}
+                    <input
+                      style={fieldInput}
+                      value={bc.amount}
+                      onChange={e => updateBillingCode(bc.id, 'amount', e.target.value)}
+                      placeholder="$0.00"
+                    />
+                  </div>
+
+                  {/* Trash icon — only shows if more than one billing code exists */}
+                  {form.billingCodes.length > 1 && (
+                    <div
+                      style={{
+                        flex:        '0 0 auto',
+                        display:     'flex',
+                        alignItems:  idx === 0 ? 'flex-end' : 'center',
+                        paddingBottom: idx === 0 ? 2 : 0,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => removeBillingCode(bc.id)}
+                        aria-label="Remove billing code"
+                        style={{ background: 'transparent', border: 'none', color: '#6b6b84', cursor: 'pointer', padding: 4 }}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* ── RESOURCES section — darker panel inside the modal ─────── */}
+            <div
+              style={{
+                background:   '#181826', // slightly darker than modal bg, still not black
+                margin:       '0 16px 16px',
+                borderRadius: 12,
+                padding:      '20px 24px',
+              }}
+            >
+              {/* Resources section header */}
+              <div
+                style={{
+                  display:        'flex',
+                  justifyContent: 'space-between',
+                  alignItems:     'center',
+                  marginBottom:   16,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize:      12,
+                    fontWeight:    700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color:         '#d4d4e4',
+                  }}
+                >
+                  Resources
+                </div>
+                {/* "+ ADD RESOURCE" link-style button */}
+                <button
+                  type="button"
+                  onClick={addResource}
+                  style={{
+                    background: 'transparent',
+                    border:     'none',
+                    color:      '#6c47ff',
+                    fontSize:   12,
+                    fontWeight: 600,
+                    cursor:     'pointer',
+                    padding:    0,
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  + ADD RESOURCE
+                </button>
+              </div>
+
+              {/* One row per resource — EMPLOYEE dropdown + RATE input + delete */}
+              {form.resources.map(res => (
+                <div key={res.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 16 }}>
+
+                  {/* EMPLOYEE dropdown — populated from the people API */}
+                  <div style={{ flex: '3 1 0' }}>
+                    <label style={fieldLabel}>Employee</label>
+                    <select
+                      style={{ ...fieldInput, cursor: 'pointer' }}
+                      value={res.employee}
+                      onChange={e => updateResource(res.id, 'employee', e.target.value)}
+                    >
+                      <option value="">Select employee...</option>
+                      {/* Options come from the /api/people endpoint */}
+                      {people.map(p => (
+                        <option key={p.id} value={p.displayName}>{p.displayName}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* RATE ($/HR) numeric input */}
+                  <div style={{ flex: '2 1 0' }}>
+                    <label style={fieldLabel}>Rate ($/hr)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      style={fieldInput}
+                      value={res.rate}
+                      onChange={e => updateResource(res.id, 'rate', e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  {/* Archive/remove button aligned to the bottom of the row */}
+                  <button
+                    type="button"
+                    onClick={() => removeResource(res.id)}
+                    aria-label="Remove resource"
+                    style={{
+                      background:    'transparent',
+                      border:        '1px solid #3c3c4e',
+                      borderRadius:  8,
+                      color:         '#6b6b84',
+                      cursor:        'pointer',
+                      padding:       '9px 10px',
+                      flexShrink:    0,
+                      display:       'flex',
+                      alignItems:    'center',
+                    }}
+                  >
+                    <ArchiveIcon />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Modal footer: Cancel + primary action button ──────────── */}
+            <div
+              style={{
+                display:        'flex',
+                justifyContent: 'flex-end',
+                gap:            12,
+                padding:        '16px 28px 24px',
+                borderTop:      '1px solid #2e2e3e',
+              }}
+            >
+              <button
+                type="button"
+                onClick={closeModal}
+                style={{
+                  background:   'transparent',
+                  border:       '1px solid #3c3c4e',
+                  borderRadius: 8,
+                  padding:      '9px 20px',
+                  fontSize:     14,
+                  color:        '#a0a0b8',
+                  cursor:       'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                style={{
+                  background:   '#6c47ff',
+                  border:       'none',
+                  borderRadius: 8,
+                  padding:      '9px 20px',
+                  fontSize:     14,
+                  fontWeight:   500,
+                  color:        '#fff',
+                  cursor:       'pointer',
+                }}
+              >
+                {editingId === null ? 'Create Project' : 'Save Changes'}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default ProjectContent;
