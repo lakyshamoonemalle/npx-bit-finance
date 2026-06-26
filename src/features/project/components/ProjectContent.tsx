@@ -4,10 +4,8 @@ import type { Person } from '../../../types/people';
 
 // ─── Table display constants ──────────────────────────────────────────────────
 
-// How many rows to show per page
 const PAGE_SIZE = 5;
 
-// Each category gets a tile color and an emoji for the PROJECT DETAILS column
 const CATEGORY_STYLE: Record<ProjectCategory, { bg: string; emoji: string }> = {
   Development: { bg: '#1d4ed8', emoji: '🚀' },
   Marketing:   { bg: '#b45309', emoji: '📣' },
@@ -17,18 +15,15 @@ const CATEGORY_STYLE: Record<ProjectCategory, { bg: string; emoji: string }> = {
   Finance:     { bg: '#15803d', emoji: '💰' },
 };
 
-// Colored dot shown in the STATUS column for each status value
 const STATUS_COLOR: Record<ProjectStatus, string> = {
-  Active:        '#22c55e', // green
-  Pending:       '#f59e0b', // amber
-  'In Progress': '#3b82f6', // blue
-  'On Hold':     '#6b7280', // gray
-  Completed:     '#8b5cf6', // purple
-  Archived:      '#4a4a52', // dark gray
+  Active:        '#22c55e',
+  Pending:       '#f59e0b',
+  'In Progress': '#3b82f6',
+  'On Hold':     '#6b7280',
+  Completed:     '#8b5cf6',
+  Archived:      '#4a4a52',
 };
 
-
-// One row in the Billing Codes section of the modal, fields to enter in the data 
 type BillingCodeRow = {
   id: number;
   label: string;
@@ -38,20 +33,18 @@ type BillingCodeRow = {
   amount: string;
 };
 
-// One row in the Resources section of the modal
 type ResourceRow = {
   id: number;
-  employee: string; // selected from the people list
-  rate: string;     // hourly rate
+  employee: string;
+  rate: string;
 };
 
-// All the fields controlled by the Create / Edit modal form
 type ModalForm = {
   name: string;
   client: string;
   startDate: string;
   endDate: string;
-  projectType: string;   // "FP" or "T&M"
+  projectType: string;
   npxNumber: string;
   category: ProjectCategory;
   status: ProjectStatus;
@@ -59,13 +52,9 @@ type ModalForm = {
   resources: ResourceRow[];
 };
 
-// ─── Module-level ID counter ──────────────────────────────────────────────────
-// Used to give each billing code / resource row a unique React key.
-// Simple incrementing counter is fine — these IDs only live in the browser.
 let _uid = 1;
 const nextUid = () => _uid++;
 
-// Factory functions so every new row starts completely blank
 const newBillingCode = (): BillingCodeRow => ({
   id: nextUid(), label: '', clientProject: '', sdsCca: '', rc: '', amount: '',
 });
@@ -73,18 +62,14 @@ const newResource = (): ResourceRow => ({
   id: nextUid(), employee: '', rate: '',
 });
 
-// Blank state for the modal when creating a brand-new project
 const EMPTY_MODAL: ModalForm = {
   name: '', client: '', startDate: '', endDate: '',
   projectType: '', npxNumber: '',
   category: 'Development', status: 'Active',
   billingCodes: [newBillingCode()],
-  resources: [newResource(), newResource()], // two empty rows by default (matches screenshot)
+  resources: [newResource(), newResource()],
 };
 
-// ─── Helper ──────────────────────────────────────────────────────────────────
-
-// Converts an ISO date string into a human-readable label like "2 days ago"
 function timeAgo(isoDate: string): string {
   const days = Math.floor((Date.now() - new Date(isoDate).getTime()) / 86_400_000);
   if (days === 0) return 'today';
@@ -97,37 +82,19 @@ function timeAgo(isoDate: string): string {
   return months === 1 ? '1 month ago' : `${months} months ago`;
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
-
 function ProjectContent() {
-  // Full project list loaded from the server
   const [projects, setProjects] = useState<Project[]>([]);
-
-  // People fetched for the "Select employee…" dropdown in Resources
   const [people, setPeople] = useState<Person[]>([]);
-
-  // Active filter tab: All | In Progress | Completed
   const [filter, setFilter] = useState<'All' | 'In Progress' | 'Completed'>('All');
-
-  // Current page (1-based)
   const [page, setPage] = useState(1);
-
-  // Whether the Create/Edit modal is open
   const [modalOpen, setModalOpen] = useState(false);
-
-  // ID of the project being edited — null means we're creating a new one
   const [editingId, setEditingId] = useState<number | null>(null);
-
-  // All values inside the modal form
   const [form, setForm] = useState<ModalForm>({ ...EMPTY_MODAL });
 
-  // Load projects and people from the API when the component first renders
   useEffect(() => {
     fetch('/api/projects').then(r => r.json()).then(setProjects);
     fetch('/api/people').then(r => r.json()).then(setPeople);
   }, []);
-
-  // ── Derived data ────────────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
     if (filter === 'In Progress') return projects.filter(p => p.status !== 'Completed');
@@ -138,11 +105,8 @@ function ProjectContent() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible    = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // ── Modal open / close ──────────────────────────────────────────────────────
-
   function openCreate() {
     setEditingId(null);
-    // Fresh blank form with two empty resource rows
     setForm({
       ...EMPTY_MODAL,
       billingCodes: [newBillingCode()],
@@ -153,7 +117,6 @@ function ProjectContent() {
 
   function openEdit(project: Project) {
     setEditingId(project.id);
-    // Pre-fill every field with the existing project's values
     setForm({
       name:         project.name,
       client:       project.client,
@@ -163,9 +126,7 @@ function ProjectContent() {
       npxNumber:    project.npxNumber,
       category:     project.category,
       status:       project.status,
-      // If the project has no billing codes yet, start with one blank row
       billingCodes: project.billingCodes?.length ? project.billingCodes : [newBillingCode()],
-      // Same for resources
       resources:    project.resources?.length    ? project.resources    : [newResource(), newResource()],
     });
     setModalOpen(true);
@@ -176,10 +137,7 @@ function ProjectContent() {
     setEditingId(null);
   }
 
-  // ── Form submission ─────────────────────────────────────────────────────────
-
   async function handleSubmit() {
-    // Require at least a name and NPX number before saving
     if (!form.name.trim() || !form.npxNumber.trim()) return;
 
     const payload = {
@@ -196,7 +154,6 @@ function ProjectContent() {
     };
 
     if (editingId === null) {
-      // POST — server assigns the id and createdAt date
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -205,7 +162,6 @@ function ProjectContent() {
       const created: Project = await res.json();
       setProjects(prev => [...prev, created]);
     } else {
-      // PUT — update the existing project record
       const res = await fetch(`/api/projects/${editingId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -218,6 +174,13 @@ function ProjectContent() {
     closeModal();
   }
 
+  // True when all required fields (except dates) are filled
+  const formValid =
+    form.name.trim() !== '' &&
+    form.client.trim() !== '' &&
+    form.projectType !== '' &&
+    form.npxNumber.trim() !== '';
+
   async function handleArchive(project: Project) {
     const res = await fetch(`/api/projects/${project.id}`, {
       method: 'PUT',
@@ -228,14 +191,10 @@ function ProjectContent() {
     setProjects(prev => prev.map(p => (p.id === project.id ? updated : p)));
   }
 
-  // ── Billing code row helpers ─────────────────────────────────────────────────
-
-  // Add a new blank billing code row
   function addBillingCode() {
     setForm(f => ({ ...f, billingCodes: [...f.billingCodes, newBillingCode()] }));
   }
 
-  // Update a single field in one billing code row (identified by its id)
   function updateBillingCode(id: number, field: keyof Omit<BillingCodeRow, 'id'>, value: string) {
     setForm(f => ({
       ...f,
@@ -243,12 +202,9 @@ function ProjectContent() {
     }));
   }
 
-  // Remove a billing code row by its id
   function removeBillingCode(id: number) {
     setForm(f => ({ ...f, billingCodes: f.billingCodes.filter(bc => bc.id !== id) }));
   }
-
-  // ── Resource row helpers ─────────────────────────────────────────────────────
 
   function addResource() {
     setForm(f => ({ ...f, resources: [...f.resources, newResource()] }));
@@ -265,9 +221,6 @@ function ProjectContent() {
     setForm(f => ({ ...f, resources: f.resources.filter(r => r.id !== id) }));
   }
 
-  // ── Shared input style used throughout the modal ─────────────────────────────
-
-  // Dark-but-not-black input background with a subtle border
   const fieldInput: React.CSSProperties = {
     width:        '100%',
     boxSizing:    'border-box',
@@ -278,10 +231,9 @@ function ProjectContent() {
     fontSize:     14,
     color:        '#e4e4f0',
     outline:      'none',
-    colorScheme:  'dark', // makes browser date-pickers use a dark theme
+    colorScheme:  'dark',
   };
 
-  // Uppercase label above each field
   const fieldLabel: React.CSSProperties = {
     display:       'block',
     fontSize:      11,
@@ -292,7 +244,6 @@ function ProjectContent() {
     marginBottom:  6,
   };
 
-  // Inline SVG trash icon reused in billing code and resource rows
   const TrashIcon = () => (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <polyline points="3 6 5 6 21 6" />
@@ -302,7 +253,6 @@ function ProjectContent() {
     </svg>
   );
 
-  // Archive icon used in the table's delete action button
   const ArchiveIcon = () => (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <polyline points="21 8 21 21 3 21 3 8" />
@@ -310,8 +260,6 @@ function ProjectContent() {
       <line x1="10" y1="12" x2="14" y2="12" />
     </svg>
   );
-
-  // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div
@@ -341,7 +289,6 @@ function ProjectContent() {
           </p>
         </div>
 
-        {/* "+ Create Project" button — opens the modal */}
         <button
           type="button"
           onClick={openCreate}
@@ -364,7 +311,7 @@ function ProjectContent() {
         </button>
       </div>
 
-      {/* ── Section heading + All / In Progress / Completed tabs ─────────── */}
+      {/* ── Section heading + filter tabs ────────────────────────────────── */}
       <div
         style={{
           display:        'flex',
@@ -380,7 +327,6 @@ function ProjectContent() {
           </p>
         </div>
 
-        {/* Filter pill tabs */}
         <div
           style={{
             display:      'flex',
@@ -441,10 +387,8 @@ function ProjectContent() {
               return (
                 <tr
                   key={project.id}
-                  // Separator between rows, but not after the last one
                   style={{ borderBottom: idx < visible.length - 1 ? '1px solid #26262c' : 'none' }}
                 >
-                  {/* PROJECT DETAILS: colored tile + name + created date */}
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                       <div
@@ -469,7 +413,6 @@ function ProjectContent() {
                   <td style={{ padding: '14px 20px', color: '#c5c5cd' }}>{project.npxNumber}</td>
                   <td style={{ padding: '14px 20px', color: '#c5c5cd' }}>{project.client}</td>
 
-                  {/* CATEGORY badge */}
                   <td style={{ padding: '14px 20px' }}>
                     <span
                       style={{
@@ -482,7 +425,6 @@ function ProjectContent() {
                     </span>
                   </td>
 
-                  {/* STATUS: colored dot + label */}
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span
@@ -496,7 +438,6 @@ function ProjectContent() {
                     </div>
                   </td>
 
-                  {/* ACTIONS: edit + delete */}
                   <td style={{ padding: '14px 20px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
                       <button
@@ -505,7 +446,6 @@ function ProjectContent() {
                         aria-label={`Edit ${project.name}`}
                         style={{ background: 'transparent', border: 'none', color: '#9b9ba3', cursor: 'pointer', padding: 6 }}
                       >
-                        {/* Pencil icon */}
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                         </svg>
@@ -524,7 +464,6 @@ function ProjectContent() {
               );
             })}
 
-            {/* Empty state */}
             {visible.length === 0 && (
               <tr>
                 <td colSpan={6} style={{ padding: '32px 20px', textAlign: 'center', color: '#7c7c85' }}>
@@ -575,7 +514,6 @@ function ProjectContent() {
           Create / Edit modal
           ══════════════════════════════════════════════════════════════════ */}
       {modalOpen && (
-        // Full-screen dark scrim — clicking it closes the modal
         <div
           onClick={closeModal}
           style={{
@@ -590,11 +528,10 @@ function ProjectContent() {
             overflowY:  'auto',
           }}
         >
-          {/* Modal box — stopPropagation prevents the scrim click from firing */}
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background:   '#1e1e2c',   // dark purple-gray, not black
+              background:   '#1e1e2c',
               borderRadius: 16,
               width:        '100%',
               maxWidth:     880,
@@ -621,7 +558,6 @@ function ProjectContent() {
                 </p>
               </div>
 
-              {/* X close button */}
               <button
                 type="button"
                 onClick={closeModal}
@@ -640,13 +576,11 @@ function ProjectContent() {
               </button>
             </div>
 
-            {/* Thin divider under the header */}
             <hr style={{ border: 'none', borderTop: '1px solid #2e2e3e', margin: 0 }} />
 
             {/* ── Modal body ───────────────────────────────────────────── */}
             <div style={{ padding: '24px 28px' }}>
 
-              {/* GENERAL INFORMATION section label */}
               <div
                 style={{
                   fontSize:      12,
@@ -660,10 +594,8 @@ function ProjectContent() {
                 General Information
               </div>
 
-              {/* Six input fields in a wrapping flex row */}
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 28 }}>
 
-                {/* PROJECT NAME — widest field */}
                 <div style={{ flex: '3 1 180px' }}>
                   <label style={fieldLabel}>Project Name</label>
                   <input
@@ -674,7 +606,6 @@ function ProjectContent() {
                   />
                 </div>
 
-                {/* CLIENT */}
                 <div style={{ flex: '2 1 140px' }}>
                   <label style={fieldLabel}>Client</label>
                   <input
@@ -685,7 +616,6 @@ function ProjectContent() {
                   />
                 </div>
 
-                {/* START DATE — browser date picker */}
                 <div style={{ flex: '2 1 130px' }}>
                   <label style={fieldLabel}>Start Date</label>
                   <input
@@ -696,7 +626,6 @@ function ProjectContent() {
                   />
                 </div>
 
-                {/* END DATE */}
                 <div style={{ flex: '2 1 130px' }}>
                   <label style={fieldLabel}>End Date</label>
                   <input
@@ -707,7 +636,6 @@ function ProjectContent() {
                   />
                 </div>
 
-                {/* PROJECT TYPE — FP (Fixed Price) or T&M (Time & Materials) */}
                 <div style={{ flex: '2 1 150px' }}>
                   <label style={fieldLabel}>Project Type</label>
                   <select
@@ -721,7 +649,6 @@ function ProjectContent() {
                   </select>
                 </div>
 
-                {/* NPX# — internal project code */}
                 <div style={{ flex: '1.5 1 100px' }}>
                   <label style={fieldLabel}>NPX#</label>
                   <input
@@ -753,7 +680,6 @@ function ProjectContent() {
                 >
                   Billing Codes
                 </div>
-                {/* "+ ADD BILLING CODE" link-style button */}
                 <button
                   type="button"
                   onClick={addBillingCode}
@@ -772,7 +698,6 @@ function ProjectContent() {
                 </button>
               </div>
 
-              {/* One row per billing code entry */}
               {form.billingCodes.map((bc, idx) => (
                 <div
                   key={bc.id}
@@ -783,9 +708,7 @@ function ProjectContent() {
                     marginBottom: idx < form.billingCodes.length - 1 ? 12 : 0,
                   }}
                 >
-                  {/* LABEL */}
                   <div style={{ flex: '2 1 90px' }}>
-                    {/* Column header only on the first row */}
                     {idx === 0 && <label style={fieldLabel}>Label</label>}
                     <input
                       style={fieldInput}
@@ -795,7 +718,6 @@ function ProjectContent() {
                     />
                   </div>
 
-                  {/* CLIENT PROJECT */}
                   <div style={{ flex: '2 1 110px' }}>
                     {idx === 0 && <label style={fieldLabel}>Client Project</label>}
                     <input
@@ -806,7 +728,6 @@ function ProjectContent() {
                     />
                   </div>
 
-                  {/* SDS/CCA */}
                   <div style={{ flex: '2 1 120px' }}>
                     {idx === 0 && <label style={fieldLabel}>SDS/CCA</label>}
                     <input
@@ -817,7 +738,6 @@ function ProjectContent() {
                     />
                   </div>
 
-                  {/* RC */}
                   <div style={{ flex: '1 1 70px' }}>
                     {idx === 0 && <label style={fieldLabel}>RC</label>}
                     <input
@@ -828,7 +748,6 @@ function ProjectContent() {
                     />
                   </div>
 
-                  {/* AMOUNT */}
                   <div style={{ flex: '1 1 80px' }}>
                     {idx === 0 && <label style={fieldLabel}>Amount</label>}
                     <input
@@ -839,7 +758,6 @@ function ProjectContent() {
                     />
                   </div>
 
-                  {/* Trash icon — only shows if more than one billing code exists */}
                   {form.billingCodes.length > 1 && (
                     <div
                       style={{
@@ -863,110 +781,105 @@ function ProjectContent() {
               ))}
             </div>
 
-            {/* ── RESOURCES section — darker panel inside the modal ─────── */}
-            <div
-              style={{
-                background:   '#181826', // slightly darker than modal bg, still not black
-                margin:       '0 16px 16px',
-                borderRadius: 12,
-                padding:      '20px 24px',
-              }}
-            >
-              {/* Resources section header */}
+            {/* ── RESOURCES section — only shown for T&M projects ───────── */}
+            {form.projectType === 'T&M' && (
               <div
                 style={{
-                  display:        'flex',
-                  justifyContent: 'space-between',
-                  alignItems:     'center',
-                  marginBottom:   16,
+                  background:   '#181826',
+                  margin:       '0 16px 16px',
+                  borderRadius: 12,
+                  padding:      '20px 24px',
                 }}
               >
                 <div
                   style={{
-                    fontSize:      12,
-                    fontWeight:    700,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    color:         '#d4d4e4',
+                    display:        'flex',
+                    justifyContent: 'space-between',
+                    alignItems:     'center',
+                    marginBottom:   16,
                   }}
                 >
-                  Resources
-                </div>
-                {/* "+ ADD RESOURCE" link-style button */}
-                <button
-                  type="button"
-                  onClick={addResource}
-                  style={{
-                    background: 'transparent',
-                    border:     'none',
-                    color:      '#6c47ff',
-                    fontSize:   12,
-                    fontWeight: 600,
-                    cursor:     'pointer',
-                    padding:    0,
-                    letterSpacing: '0.04em',
-                  }}
-                >
-                  + ADD RESOURCE
-                </button>
-              </div>
-
-              {/* One row per resource — EMPLOYEE dropdown + RATE input + delete */}
-              {form.resources.map(res => (
-                <div key={res.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 16 }}>
-
-                  {/* EMPLOYEE dropdown — populated from the people API */}
-                  <div style={{ flex: '3 1 0' }}>
-                    <label style={fieldLabel}>Employee</label>
-                    <select
-                      style={{ ...fieldInput, cursor: 'pointer' }}
-                      value={res.employee}
-                      onChange={e => updateResource(res.id, 'employee', e.target.value)}
-                    >
-                      <option value="">Select employee...</option>
-                      {/* Options come from the /api/people endpoint */}
-                      {people.map(p => (
-                        <option key={p.id} value={p.displayName}>{p.displayName}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* RATE ($/HR) numeric input */}
-                  <div style={{ flex: '2 1 0' }}>
-                    <label style={fieldLabel}>Rate ($/hr)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      style={fieldInput}
-                      value={res.rate}
-                      onChange={e => updateResource(res.id, 'rate', e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-
-                  {/* Archive/remove button aligned to the bottom of the row */}
-                  <button
-                    type="button"
-                    onClick={() => removeResource(res.id)}
-                    aria-label="Remove resource"
+                  <div
                     style={{
-                      background:    'transparent',
-                      border:        '1px solid #3c3c4e',
-                      borderRadius:  8,
-                      color:         '#6b6b84',
-                      cursor:        'pointer',
-                      padding:       '9px 10px',
-                      flexShrink:    0,
-                      display:       'flex',
-                      alignItems:    'center',
+                      fontSize:      12,
+                      fontWeight:    700,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color:         '#d4d4e4',
                     }}
                   >
-                    <ArchiveIcon />
+                    Resources
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addResource}
+                    style={{
+                      background: 'transparent',
+                      border:     'none',
+                      color:      '#6c47ff',
+                      fontSize:   12,
+                      fontWeight: 600,
+                      cursor:     'pointer',
+                      padding:    0,
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    + ADD RESOURCE
                   </button>
                 </div>
-              ))}
-            </div>
+
+                {form.resources.map(res => (
+                  <div key={res.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 16 }}>
+
+                    <div style={{ flex: '3 1 0' }}>
+                      <label style={fieldLabel}>Employee</label>
+                      <select
+                        style={{ ...fieldInput, cursor: 'pointer' }}
+                        value={res.employee}
+                        onChange={e => updateResource(res.id, 'employee', e.target.value)}
+                      >
+                        <option value="">Select employee...</option>
+                        {people.map(p => (
+                          <option key={p.id} value={p.displayName}>{p.displayName}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ flex: '2 1 0' }}>
+                      <label style={fieldLabel}>Rate ($/hr)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        style={fieldInput}
+                        value={res.rate}
+                        onChange={e => updateResource(res.id, 'rate', e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => removeResource(res.id)}
+                      aria-label="Remove resource"
+                      style={{
+                        background:    'transparent',
+                        border:        '1px solid #3c3c4e',
+                        borderRadius:  8,
+                        color:         '#6b6b84',
+                        cursor:        'pointer',
+                        padding:       '9px 10px',
+                        flexShrink:    0,
+                        display:       'flex',
+                        alignItems:    'center',
+                      }}
+                    >
+                      <ArchiveIcon />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* ── Modal footer: Cancel + primary action button ──────────── */}
             <div
@@ -996,15 +909,17 @@ function ProjectContent() {
               <button
                 type="button"
                 onClick={handleSubmit}
+                disabled={!formValid}
                 style={{
-                  background:   '#6c47ff',
+                  background:   formValid ? '#6c47ff' : '#3a3050',
                   border:       'none',
                   borderRadius: 8,
                   padding:      '9px 20px',
                   fontSize:     14,
                   fontWeight:   500,
-                  color:        '#fff',
-                  cursor:       'pointer',
+                  color:        formValid ? '#fff' : '#6b6b84',
+                  cursor:       formValid ? 'pointer' : 'not-allowed',
+                  transition:   'background 0.15s, color 0.15s',
                 }}
               >
                 {editingId === null ? 'Create Project' : 'Save Changes'}
