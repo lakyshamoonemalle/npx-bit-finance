@@ -138,7 +138,7 @@ function ProjectContent() {
   }
 
   async function handleSubmit() {
-    if (!form.name.trim() || !form.npxNumber.trim()) return;
+    if (!formValid) return;
 
     const payload = {
       name:         form.name.trim(),
@@ -153,33 +153,41 @@ function ProjectContent() {
       resources:    form.resources,
     };
 
-    if (editingId === null) {
-      const res = await fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const created: Project = await res.json();
-      setProjects(prev => [...prev, created]);
-    } else {
-      const res = await fetch(`/api/projects/${editingId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const updated: Project = await res.json();
-      setProjects(prev => prev.map(p => (p.id === editingId ? updated : p)));
+    try {
+      if (editingId === null) {
+        const res = await fetch('/api/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        const created: Project = await res.json();
+        setProjects(prev => [...prev, created]);
+      } else {
+        const res = await fetch(`/api/projects/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        const updated: Project = await res.json();
+        setProjects(prev => prev.map(p => (p.id === editingId ? updated : p)));
+      }
+      closeModal();
+    } catch (err) {
+      console.error('Failed to save project:', err);
+      alert('Could not save the project. Make sure the dev server is running (npm run dev).');
     }
-
-    closeModal();
   }
 
-  // True when all required fields (except dates) are filled
+  const npxValid = /^NPX-\d{5}$/.test(form.npxNumber.trim());
+
+  // True when all required fields (except dates) are filled and NPX format is valid
   const formValid =
     form.name.trim() !== '' &&
     form.client.trim() !== '' &&
     form.projectType !== '' &&
-    form.npxNumber.trim() !== '';
+    npxValid;
 
   async function handleArchive(project: Project) {
     const res = await fetch(`/api/projects/${project.id}`, {
@@ -649,16 +657,28 @@ function ProjectContent() {
                   </select>
                 </div>
 
+
                 <div style={{ flex: '1.5 1 100px' }}>
                   <label style={fieldLabel}>NPX#</label>
                   <input
-                    style={fieldInput}
+                    style={{
+                      ...fieldInput,
+                      border: form.npxNumber && !npxValid
+                        ? '1px solid #ef4444'
+                        : '1px solid #3c3c4e',
+                    }}
                     value={form.npxNumber}
                     onChange={e => setForm(f => ({ ...f, npxNumber: e.target.value }))}
                     placeholder="e.g. NPX-12345"
                   />
-                </div>
+                  {form.npxNumber && !npxValid && (
+                    <span style={{ fontSize: 11, color: '#ef4444', marginTop: 4, display: 'block' }}>
+                      Format must be NPX- followed by numbers (e.g. NPX-12345)
+                    </span>
+                  )}
               </div>
+              </div>
+              
 
               {/* ── BILLING CODES section ──────────────────────────────── */}
               <div

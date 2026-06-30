@@ -82,5 +82,47 @@
     "fkPeopleId": null,
     "rate": 0,
     "hours": 0
+  },
+  {
+    "id": 1782826713672,
+    "fkProjectId": 1782826713671,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782826713672,
+    "fkProjectId": 1782826713671,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782826914783,
+    "fkProjectId": 1782826914782,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782826914783,
+    "fkProjectId": 1782826914782,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782827520324,
+    "fkProjectId": 1782827520323,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782827520324,
+    "fkProjectId": 1782827520323,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
   }
 ]

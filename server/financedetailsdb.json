@@ -70,5 +70,41 @@
     "validTo": "",
     "costModel": "",
     "clientProject": ""
+  },
+  {
+    "id": 1782826713671,
+    "fkProjectId": 1782826713671,
+    "brucePowerPm": 0,
+    "projectNum": 0,
+    "ccaSds": "",
+    "rc": "",
+    "validFrom": "",
+    "validTo": "",
+    "costModel": "",
+    "clientProject": ""
+  },
+  {
+    "id": 1782826914782,
+    "fkProjectId": 1782826914782,
+    "brucePowerPm": 0,
+    "projectNum": 0,
+    "ccaSds": "",
+    "rc": "",
+    "validFrom": "",
+    "validTo": "",
+    "costModel": "",
+    "clientProject": ""
+  },
+  {
+    "id": 1782827520323,
+    "fkProjectId": 1782827520323,
+    "brucePowerPm": 12222,
+    "projectNum": 0,
+    "ccaSds": "123",
+    "rc": "12",
+    "validFrom": "",
+    "validTo": "",
+    "costModel": "INTERAL",
+    "clientProject": "CP-12-12"
   }
 ]
