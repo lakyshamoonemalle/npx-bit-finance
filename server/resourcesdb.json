@@ -124,5 +124,173 @@
     "fkPeopleId": null,
     "rate": 0,
     "hours": 0
+  },
+  {
+    "id": 1782847921515,
+    "fkProjectId": 1782847921514,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921515,
+    "fkProjectId": 1782847921514,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921517,
+    "fkProjectId": 1782847921516,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921517,
+    "fkProjectId": 1782847921516,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921519,
+    "fkProjectId": 1782847921519,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921520,
+    "fkProjectId": 1782847921519,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921522,
+    "fkProjectId": 1782847921521,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921522,
+    "fkProjectId": 1782847921521,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921527,
+    "fkProjectId": 1782847921526,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921527,
+    "fkProjectId": 1782847921526,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921530,
+    "fkProjectId": 1782847921529,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921530,
+    "fkProjectId": 1782847921529,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921532,
+    "fkProjectId": 1782847921531,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921532,
+    "fkProjectId": 1782847921531,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921535,
+    "fkProjectId": 1782847921533,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921535,
+    "fkProjectId": 1782847921533,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921538,
+    "fkProjectId": 1782847921537,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921538,
+    "fkProjectId": 1782847921537,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921540,
+    "fkProjectId": 1782847921539,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921540,
+    "fkProjectId": 1782847921539,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921542,
+    "fkProjectId": 1782847921541,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782847921542,
+    "fkProjectId": 1782847921541,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782848861228,
+    "fkProjectId": 1782848861227,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1782848861228,
+    "fkProjectId": 1782848861227,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
   }
 ]

@@ -85,16 +85,27 @@ function timeAgo(isoDate: string): string {
 function ProjectContent() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [filter, setFilter] = useState<'All' | 'In Progress' | 'Completed'>('All');
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ModalForm>({ ...EMPTY_MODAL });
 
-  useEffect(() => {
-    fetch('/api/projects').then(r => r.json()).then(setProjects);
-    fetch('/api/people').then(r => r.json()).then(setPeople);
-  }, []);
+  function loadData() {
+    setLoading(true);
+    setLoadError(false);
+    Promise.all([
+      fetch('/api/projects').then(r => r.json()),
+      fetch('/api/people').then(r => r.json()),
+    ])
+      .then(([p, people]) => { setProjects(p); setPeople(people); })
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => { loadData(); }, []);
 
   const filtered = useMemo(() => {
     if (filter === 'In Progress') return projects.filter(p => p.status !== 'Completed');
@@ -180,7 +191,7 @@ function ProjectContent() {
     }
   }
 
-  const npxValid = /^NPX-\d{5}$/.test(form.npxNumber.trim());
+  const npxValid = /^NPX-[A-Z]{3}-\d{5}$/.test(form.npxNumber.trim());
 
   // True when all required fields (except dates) are filled and NPX format is valid
   const formValid =
@@ -472,7 +483,30 @@ function ProjectContent() {
               );
             })}
 
-            {visible.length === 0 && (
+            {loading && (
+              <tr>
+                <td colSpan={6} style={{ padding: '32px 20px', textAlign: 'center', color: '#7c7c85' }}>
+                  Loading projects…
+                </td>
+              </tr>
+            )}
+
+            {loadError && (
+              <tr>
+                <td colSpan={6} style={{ padding: '32px 20px', textAlign: 'center', color: '#ef4444' }}>
+                  Could not load projects — make sure the dev server is running.{' '}
+                  <button
+                    type="button"
+                    onClick={loadData}
+                    style={{ color: '#6c47ff', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: 14 }}
+                  >
+                    Retry
+                  </button>
+                </td>
+              </tr>
+            )}
+
+            {!loading && !loadError && visible.length === 0 && (
               <tr>
                 <td colSpan={6} style={{ padding: '32px 20px', textAlign: 'center', color: '#7c7c85' }}>
                   No projects found.
@@ -669,11 +703,11 @@ function ProjectContent() {
                     }}
                     value={form.npxNumber}
                     onChange={e => setForm(f => ({ ...f, npxNumber: e.target.value }))}
-                    placeholder="e.g. NPX-12345"
+                    placeholder="e.g. NPX-DEV-12345"
                   />
                   {form.npxNumber && !npxValid && (
                     <span style={{ fontSize: 11, color: '#ef4444', marginTop: 4, display: 'block' }}>
-                      Format must be NPX- followed by numbers (e.g. NPX-12345)
+                      Format: NPX-XXX-##### (3 letters, 5 digits)
                     </span>
                   )}
               </div>
