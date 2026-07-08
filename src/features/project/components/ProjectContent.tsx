@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import Button from '@mui/material/Button';
 import type { Project, ProjectStatus, ProjectCategory } from '../../../types/project';
 import type { Person } from '../../../types/people';
 
@@ -200,14 +201,16 @@ function ProjectContent() {
     form.projectType !== '' &&
     npxValid;
 
-  async function handleArchive(project: Project) {
-    const res = await fetch(`/api/projects/${project.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'Archived' }),
-    });
-    const updated: Project = await res.json();
-    setProjects(prev => prev.map(p => (p.id === project.id ? updated : p)));
+  async function handleDelete(project: Project) {
+    if (!window.confirm(`Delete "${project.name}"? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/api/projects/${project.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      setProjects(prev => prev.filter(p => p.id !== project.id));
+    } catch (err) {
+      console.error('Failed to delete project:', err);
+      alert('Could not delete the project. Make sure the dev server is running (npm run dev).');
+    }
   }
 
   function addBillingCode() {
@@ -471,11 +474,11 @@ function ProjectContent() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleArchive(project)}
-                        aria-label={`Archive ${project.name}`}
+                        onClick={() => handleDelete(project)}
+                        aria-label={`Delete ${project.name}`}
                         style={{ background: 'transparent', border: 'none', color: '#9b9ba3', cursor: 'pointer', padding: 6 }}
                       >
-                        <ArchiveIcon />
+                        <TrashIcon />
                       </button>
                     </div>
                   </td>
@@ -960,24 +963,14 @@ function ProjectContent() {
               >
                 Cancel
               </button>
-              <button
-                type="button"
+              <Button
+                variant="contained"
                 onClick={handleSubmit}
                 disabled={!formValid}
-                style={{
-                  background:   formValid ? '#6c47ff' : '#3a3050',
-                  border:       'none',
-                  borderRadius: 8,
-                  padding:      '9px 20px',
-                  fontSize:     14,
-                  fontWeight:   500,
-                  color:        formValid ? '#fff' : '#6b6b84',
-                  cursor:       formValid ? 'pointer' : 'not-allowed',
-                  transition:   'background 0.15s, color 0.15s',
-                }}
+                sx={{ textTransform: 'none' }}
               >
                 {editingId === null ? 'Create Project' : 'Save Changes'}
-              </button>
+              </Button>
             </div>
 
           </div>

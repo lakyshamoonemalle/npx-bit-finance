@@ -250,5 +250,53 @@
     "validTo": "",
     "costModel": "",
     "clientProject": ""
+  },
+  {
+    "id": 1783436218872,
+    "fkProjectId": 1783436218872,
+    "brucePowerPm": 0,
+    "projectNum": 0,
+    "ccaSds": "",
+    "rc": "",
+    "validFrom": "",
+    "validTo": "",
+    "costModel": "",
+    "clientProject": ""
+  },
+  {
+    "id": 1783438335800,
+    "fkProjectId": 1783438335800,
+    "brucePowerPm": 0,
+    "projectNum": 0,
+    "ccaSds": "",
+    "rc": "",
+    "validFrom": "",
+    "validTo": "",
+    "costModel": "",
+    "clientProject": ""
+  },
+  {
+    "id": 1783439791046,
+    "fkProjectId": 1783439791046,
+    "brucePowerPm": 0,
+    "projectNum": 0,
+    "ccaSds": "",
+    "rc": "",
+    "validFrom": "",
+    "validTo": "",
+    "costModel": "",
+    "clientProject": ""
+  },
+  {
+    "id": 1783445014790,
+    "fkProjectId": 1783445014790,
+    "brucePowerPm": 0,
+    "projectNum": 0,
+    "ccaSds": "",
+    "rc": "",
+    "validFrom": "",
+    "validTo": "",
+    "costModel": "",
+    "clientProject": ""
   }
 ]

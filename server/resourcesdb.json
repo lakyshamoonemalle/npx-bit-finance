@@ -292,5 +292,61 @@
     "fkPeopleId": null,
     "rate": 0,
     "hours": 0
+  },
+  {
+    "id": 1783436218875,
+    "fkProjectId": 1783436218872,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1783436218875,
+    "fkProjectId": 1783436218872,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1783438335803,
+    "fkProjectId": 1783438335800,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1783438335803,
+    "fkProjectId": 1783438335800,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1783439791047,
+    "fkProjectId": 1783439791046,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1783439791047,
+    "fkProjectId": 1783439791046,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1783445014796,
+    "fkProjectId": 1783445014790,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
+  },
+  {
+    "id": 1783445014796,
+    "fkProjectId": 1783445014790,
+    "fkPeopleId": null,
+    "rate": 0,
+    "hours": 0
   }
 ]
